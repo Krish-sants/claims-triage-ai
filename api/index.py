@@ -8,8 +8,10 @@ Deployed:    every /api/* request is rewritten to this ASGI app (vercel.json).
 
 import hashlib
 import time
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from ._extraction import extract_facts
@@ -17,6 +19,18 @@ from ._fraud import score_fraud
 from ._routing import draft_acknowledgement, route, score_severity
 
 app = FastAPI(title="ClaimSense — AI Claims Triage", version="1.0.0")
+
+# Vercel's FastAPI preset routes every request through this app, so the UI
+# is served from here too instead of as a separate static file.
+try:
+    _INDEX_HTML = (Path(__file__).resolve().parent.parent / "index.html").read_text(encoding="utf-8")
+except OSError:
+    _INDEX_HTML = "<h1>ClaimSense</h1><p>UI not bundled — see /docs for the API.</p>"
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def home():
+    return _INDEX_HTML
 
 
 class ClaimIntake(BaseModel):
